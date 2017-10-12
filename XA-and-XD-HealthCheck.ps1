@@ -23,6 +23,16 @@
 #
 #==============================================================================================
 
+#=======DATADOG FUNCTIONS =====================================================================
+
+function dogstatsd($metric) {
+	$udpClient = New-Object System.Net.Sockets.UdpClient
+	$udpClient.Connect('127.0.0.1', '8125')
+    $encodedData=[System.Text.Encoding]::ASCII.GetBytes($metric)
+    $bytesSent=$udpClient.Send($encodedData,$encodedData.Length)
+    $udpClient.Close()
+}
+
 #Don't change below here if you don't know what you are doing ... 
 #==============================================================================================
 # Load only the snap-ins, which are used
@@ -555,6 +565,7 @@ $tests = @{}
 #Name of $Controller
 $ControllerDNS = $Controller | %{ $_.DNSName }
 "Controller: $ControllerDNS" | LogMe -display -progress
+$tags = "|#ControllerServer:" + $ControllerDNS # datadog-tag
   
 #Ping $Controller
 $result = Ping $ControllerDNS 100
@@ -573,6 +584,8 @@ else { $tests.State = "SUCCESS", $ControllerState }
 $ControllerDesktopsRegistered = $Controller | %{ $_.DesktopsRegistered }
 "Registered: $ControllerDesktopsRegistered" | LogMe -display -progress
 $tests.DesktopsRegistered = "NEUTRAL", $ControllerDesktopsRegistered
+$metric = "dogstatsd.xenapp.DesktopsRegistered:" + $ControllerDesktopsRegistered + "|g" + $tags # datadog-metric
+dogstatsd($metric) # datadog-dogstatsd function call
   
 #ActiveSiteServices on this controller
 $ActiveSiteServices = $Controller | %{ $_.ActiveSiteServices }
@@ -664,6 +677,7 @@ foreach ($Catalog in $Catalogs) {
   #Name of MachineCatalog
   $CatalogName = $Catalog | %{ $_.Name }
   "Catalog: $CatalogName" | LogMe -display -progress
+  $tags = "|#CatalogName:" + $CatalogName # datadog-tag
 
   if ($ExcludedCatalogs -contains $CatalogName) {
     "Excluded Catalog, skipping" | LogMe -display -progress
@@ -671,17 +685,23 @@ foreach ($Catalog in $Catalogs) {
     #CatalogAssignedCount
     $CatalogAssignedCount = $Catalog | %{ $_.AssignedCount }
     "Assigned: $CatalogAssignedCount" | LogMe -display -progress
-    $tests.AssignedToUser = "NEUTRAL", $CatalogAssignedCount
+	$tests.AssignedToUser = "NEUTRAL", $CatalogAssignedCount
+	$metric = "dogstatsd.xenapp.AssignedToUser:" + $CatalogAssignedCount + "|g" + $tags # datadog-metric
+    dogstatsd($metric) # datadog-dogstatsd function call
   
     #CatalogUnassignedCount
     $CatalogUnAssignedCount = $Catalog | %{ $_.UnassignedCount }
     "Unassigned: $CatalogUnAssignedCount" | LogMe -display -progress
-    $tests.NotToUserAssigned = "NEUTRAL", $CatalogUnAssignedCount
+	$tests.NotToUserAssigned = "NEUTRAL", $CatalogUnAssignedCount
+	$metric = "dogstatsd.xenapp.NotToUserAssigned:" + $CatalogUnAssignedCount + "|g" + $tags # datadog-metric
+    dogstatsd($metric) # datadog-dogstatsd function call
   
     # Assigned to DeliveryGroup
     $CatalogUsedCountCount = $Catalog | %{ $_.UsedCount }
     "Used: $CatalogUsedCountCount" | LogMe -display -progress
-    $tests.AssignedToDG = "NEUTRAL", $CatalogUsedCountCount
+	$tests.AssignedToDG = "NEUTRAL", $CatalogUsedCountCount
+	$metric = "dogstatsd.xenapp.AssignedToDG:" + $CatalogUsedCountCount + "|g" + $tags # datadog-metric
+    dogstatsd($metric) # datadog-dogstatsd function call
 
     #MinimumFunctionalLevel
 	$MinimumFunctionalLevel = $Catalog | %{ $_.MinimumFunctionalLevel }

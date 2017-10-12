@@ -738,6 +738,7 @@ foreach ($Assigment in $Assigments) {
   #Name of DeliveryGroup
   $DeliveryGroup = $Assigment | %{ $_.Name }
   "DeliveryGroup: $DeliveryGroup" | LogMe -display -progress
+  $tags = "|#DeliveryGroup:" + $DeliveryGroup # dd-tag
   
   if ($ExcludedCatalogs -contains $DeliveryGroup) {
     "Excluded Delivery Group, skipping" | LogMe -display -progress
@@ -751,7 +752,9 @@ foreach ($Assigment in $Assigments) {
     #DesktopsTotal
     $TotalDesktops = $Assigment | %{ $_.TotalDesktops }
     "DesktopsAvailable: $TotalDesktops" | LogMe -display -progress
-    $tests.TotalMachines = "NEUTRAL", $TotalDesktops
+	$tests.TotalMachines = "NEUTRAL", $TotalDesktops
+	$metric = "dogstatsd.xenapp.TotalDesktops:" + $TotalDesktops + "|g" + $tags # datadog-metric
+	dogstatsd($metric) # datadog-dogstatsd function call
   
     #DesktopsAvailable
     $AssigmentDesktopsAvailable = $Assigment | %{ $_.DesktopsAvailable }
